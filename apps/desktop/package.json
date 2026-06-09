@@ -14,7 +14,11 @@
     "dist:win": "pnpm build:main && electron-builder --win"
   },
   "dependencies": {
-    "@cetakdocs/api": "workspace:*"
+    "@cetakdocs/api": "workspace:*",
+    "@hono/node-server": "^1.11.1",
+    "@libsql/client": "^0.6.2",
+    "drizzle-orm": "^0.30.10",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "electron": "^31.7.7",

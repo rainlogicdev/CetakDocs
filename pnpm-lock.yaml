@@ -84,6 +84,18 @@ importers:
       '@cetakdocs/api':
         specifier: workspace:*
         version: link:../api
+      '@hono/node-server':
+        specifier: ^1.11.1
+        version: 1.19.14(hono@4.12.23)
+      '@libsql/client':
+        specifier: ^0.6.2
+        version: 0.6.2
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+      drizzle-orm:
+        specifier: ^0.30.10
+        version: 0.30.10(@libsql/client@0.6.2)(@types/better-sqlite3@7.6.13)(@types/react@18.3.31)(better-sqlite3@9.6.0)(react@18.3.1)
     devDependencies:
       electron:
         specifier: ^31.7.7
