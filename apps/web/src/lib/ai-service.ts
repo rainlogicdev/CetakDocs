@@ -9,20 +9,20 @@ export const AI_PRESETS = [
   {
     name: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
-    defaultModel: 'gpt-4o-mini',
-    models: ['gpt-4o-mini', 'gpt-4o', 'o3-mini', 'o1'],
+    defaultModel: 'gpt-5.5-instant',
+    models: ['gpt-5.5-instant', 'gpt-5.5', 'gpt-5.5-pro', 'gpt-5.4-mini'],
   },
   {
     name: 'Gemini (Google AI Studio)',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    defaultModel: 'gemini-2.5-flash',
-    models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+    defaultModel: 'gemini-3.5-flash',
+    models: ['gemini-3.5-flash', 'gemini-3.1-pro', 'gemini-2.5-flash', 'gemini-2.5-pro'],
   },
   {
     name: 'Groq',
     baseUrl: 'https://api.groq.com/openai/v1',
     defaultModel: 'llama-3.3-70b-versatile',
-    models: ['llama-3.3-70b-versatile', 'llama-3.3-70b-specdec', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+    models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it', 'mixtral-8x7b-32768'],
   },
   {
     name: 'DeepSeek',
@@ -33,14 +33,14 @@ export const AI_PRESETS = [
   {
     name: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'google/gemini-2.5-flash',
-    models: ['google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b-instruct', 'deepseek/deepseek-chat', 'deepseek/deepseek-r1'],
+    defaultModel: 'google/gemini-3.5-flash',
+    models: ['google/gemini-3.5-flash', 'openai/gpt-5.5-instant', 'deepseek/deepseek-chat', 'deepseek/deepseek-r1'],
   },
   {
     name: 'Ollama (Lokal)',
     baseUrl: 'http://localhost:11434/v1',
     defaultModel: 'deepseek-r1',
-    models: ['deepseek-r1', 'llama3.3', 'qwen2.5-coder', 'llama3'],
+    models: ['deepseek-r1', 'llama3.3', 'qwen2.5-coder', 'gemma2'],
   },
 ];
 
