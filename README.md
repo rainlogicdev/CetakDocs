@@ -11,8 +11,8 @@ Aplikasi ini menggabungkan fleksibilitas template dokumen standar Indonesia, pem
 
 ## 📥 Download Aplikasi (Alpha Release)
 
-Anda dapat mengunduh berkas biner/installer alpha r1 untuk Windows secara langsung:
-* **[Download CetakDocs Alpha R1 (Windows Installer)](https://github.com/RainLogic/cetakdocs/releases/download/v0.1.0-alpha.1/CetakDocs-0.1.0-Setup.exe)**
+Anda dapat mengunduh berkas biner/installer untuk Windows secara langsung:
+* **[Download CetakDocs v0.5.1 (Windows Installer)](https://github.com/rainlogicdev/CetakDocs/releases/download/v0.5.1/CetakDocs-0.5.1-Setup.exe)**
 
 ---
 
