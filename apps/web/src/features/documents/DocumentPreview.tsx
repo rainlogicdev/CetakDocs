@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import type { TemplateDefinition } from '@cetakdocs/core';
 import { renderDocumentHtml } from '@cetakdocs/renderer';
 
@@ -10,14 +10,65 @@ interface DocumentPreviewProps {
 }
 
 export function DocumentPreview({ template, data, orgName = '', docNumber = 'PREVIEW' }: DocumentPreviewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  // Determine page dimensions in pixels
+  const pageWidthPx = useMemo(() => {
+    const size = template.page.size;
+    const isLandscape = template.page.orientation === 'landscape';
+    if (size === 'A4') return isLandscape ? 1123 : 794;
+    if (size === 'A5') return isLandscape ? 794 : 559;
+    if (size === 'thermal-80mm') return 302;
+    if (size === 'thermal-58mm') return 219;
+    return 794;
+  }, [template.page.size, template.page.orientation]);
+
+  const pageHeightPx = useMemo(() => {
+    const size = template.page.size;
+    const isLandscape = template.page.orientation === 'landscape';
+    if (size === 'A4') return isLandscape ? 794 : 1123;
+    if (size === 'A5') return isLandscape ? 559 : 794;
+    if (size === 'thermal-80mm') return null; // Dynamic height
+    if (size === 'thermal-58mm') return null; // Dynamic height
+    return 1123;
+  }, [template.page.size, template.page.orientation]);
+
+  // Handle dynamic responsive scale recalculation
+  useEffect(() => {
+    const handleResize = () => {
+      if (!containerRef.current) return;
+      const parentWidth = containerRef.current.clientWidth;
+      if (!parentWidth) return;
+      
+      const padding = 32; // Total padding on left/right
+      const availableWidth = parentWidth - padding;
+      
+      if (availableWidth < pageWidthPx) {
+        setScale(availableWidth / pageWidthPx);
+      } else {
+        setScale(1);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    
+    // Tiny timeout to let CSS layouts resolve their widths
+    const timer = setTimeout(handleResize, 100);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(timer);
+    };
+  }, [pageWidthPx]);
+
   // Generate the full HTML document using the shared renderer
-  // This guarantees preview matches print/PDF output exactly
   const renderedHtml = useMemo(() => {
     return renderDocumentHtml(template, data, orgName, docNumber);
   }, [template, data, orgName, docNumber]);
 
   // Extract only the body content and styles from the full HTML
-  // We need styles for proper rendering but don't want nested <html>/<body>
   const { styles, bodyContent } = useMemo(() => {
     const styleMatch = renderedHtml.match(/<style>([\s\S]*?)<\/style>/);
     const bodyMatch = renderedHtml.match(/<body>([\s\S]*?)<\/body>/);
@@ -27,31 +78,47 @@ export function DocumentPreview({ template, data, orgName = '', docNumber = 'PRE
     };
   }, [renderedHtml]);
 
-  const pageSizeClass = template.page.size === 'A4' ? 'w-[210mm] min-h-[297mm]' :
-                        template.page.size === 'A5' 
-                          ? (template.page.orientation === 'landscape' ? 'w-[210mm] min-h-[148mm]' : 'w-[148mm] min-h-[210mm]')
-                        : 'w-[210mm] min-h-[297mm]';
-
   return (
-    <div className="flex flex-col items-center w-full print:block print:w-auto">
-      <div 
-        className={`bg-white shadow-xl ${pageSizeClass} relative origin-top scale-[0.6] sm:scale-75 md:scale-90 lg:scale-100 transition-transform print:scale-100 print:shadow-none print:w-full print:h-auto print:min-h-0`}
-        style={{ padding: template.page.margin }}
+    <div ref={containerRef} className="w-full flex justify-center p-4 print:p-0 print:block overflow-hidden">
+      <div
+        className="flex justify-center items-start print:block"
+        style={{
+          width: `${pageWidthPx * scale}px`,
+          height: pageHeightPx ? `${pageHeightPx * scale}px` : 'auto',
+          overflow: 'hidden'
+        }}
       >
-        {/* Scoped styles from the renderer */}
-        <style dangerouslySetInnerHTML={{ __html: styles }} />
-        
-        {/* Render the document body content from the shared renderer */}
         <div 
-          className="font-doc-sans text-black print-page w-full h-full"
-          dangerouslySetInnerHTML={{ __html: bodyContent }} 
-        />
+          className="bg-white shadow-xl relative transition-transform print:scale-100 print:shadow-none print:w-full print:h-auto print:min-h-0"
+          style={{ 
+            width: template.page.size === 'A4' ? '210mm' :
+                   template.page.size === 'A5' 
+                     ? (template.page.orientation === 'landscape' ? '210mm' : '148mm')
+                   : '210mm',
+            minHeight: template.page.size === 'A4' ? '297mm' :
+                       template.page.size === 'A5'
+                         ? (template.page.orientation === 'landscape' ? '148mm' : '210mm')
+                       : '297mm',
+            padding: template.page.margin,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top center',
+          }}
+        >
+          {/* Scoped styles from the renderer */}
+          <style dangerouslySetInnerHTML={{ __html: styles }} />
+          
+          {/* Render the document body content from the shared renderer */}
+          <div 
+            className="font-doc-sans text-black print-page w-full h-full"
+            dangerouslySetInnerHTML={{ __html: bodyContent }} 
+          />
 
-        {(!template.layout || !template.layout.blocks) && (
-          <div className="text-center text-gray-400 py-20 flex items-center justify-center h-full">
-            Template ini belum memiliki definisi layout cetak.
-          </div>
-        )}
+          {(!template.layout || !template.layout.blocks) && (
+            <div className="text-center text-gray-400 py-20 flex items-center justify-center h-full">
+              Template ini belum memiliki definisi layout cetak.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

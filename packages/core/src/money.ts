@@ -46,6 +46,8 @@ export function terbilang(amount: number): string {
     temp = terbilang(Math.floor(cleanAmount / 1000000000)) + ' milyar' + terbilang(cleanAmount % 1000000000);
   } else if (cleanAmount < 1000000000000000) {
     temp = terbilang(Math.floor(cleanAmount / 1000000000000)) + ' triliun' + terbilang(cleanAmount % 1000000000000);
+  } else if (cleanAmount < 1000000000000000000) {
+    temp = terbilang(Math.floor(cleanAmount / 1000000000000000)) + ' kuadriliun' + terbilang(cleanAmount % 1000000000000000);
   }
 
   return temp;
@@ -53,8 +55,9 @@ export function terbilang(amount: number): string {
 
 export function terbilangRupiah(amount: number): string {
   if (amount === 0) return 'Nol Rupiah';
-  const spelling = terbilang(amount).trim();
+  const isNegative = amount < 0;
+  const spelling = terbilang(Math.abs(amount)).trim();
   // Capitalize first letter
   const formattedSpelling = spelling.charAt(0).toUpperCase() + spelling.slice(1);
-  return `${formattedSpelling} Rupiah`.replace(/\s+/g, ' ').trim();
+  return `${isNegative ? 'Minus ' : ''}${formattedSpelling} Rupiah`.replace(/\s+/g, ' ').trim();
 }

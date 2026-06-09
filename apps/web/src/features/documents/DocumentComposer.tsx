@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import type { TemplateDefinition } from '@cetakdocs/core';
 import { DocumentToolbar } from './DocumentToolbar';
@@ -13,8 +13,11 @@ interface DocumentComposerProps {
 
 export function DocumentComposer({ template }: DocumentComposerProps) {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<Record<string, any>>({});
-  const [docTitle, setDocTitle] = useState(`${template.name} Baru`);
+  const location = useLocation();
+  const editingDocId = location.state?.editingDocId;
+  const initialData = location.state?.initialData || {};
+  const [formData, setFormData] = useState<Record<string, any>>(initialData);
+  const [docTitle, setDocTitle] = useState(location.state?.title || `${template.name} Baru`);
 
   // Bind AI helper context to global window object
   useEffect(() => {
@@ -30,20 +33,28 @@ export function DocumentComposer({ template }: DocumentComposerProps) {
 
   const handleSaveDraft = async () => {
     try {
-      // Use fallback for crypto.randomUUID in non-secure contexts
-      const docId = typeof crypto !== 'undefined' && crypto.randomUUID 
-        ? crypto.randomUUID() 
-        : Date.now().toString(36) + Math.random().toString(36).substring(2);
-        
-      await db.documents.add({
-        id: docId,
-        templateId: template.id,
-        title: docTitle,
-        status: 'draft',
-        dataJson: JSON.stringify(formData),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+      if (editingDocId) {
+        await db.documents.update(editingDocId, {
+          title: docTitle,
+          dataJson: JSON.stringify(formData),
+          updatedAt: new Date().toISOString(),
+        });
+      } else {
+        // Use fallback for crypto.randomUUID in non-secure contexts
+        const docId = typeof crypto !== 'undefined' && crypto.randomUUID 
+          ? crypto.randomUUID() 
+          : Date.now().toString(36) + Math.random().toString(36).substring(2);
+          
+        await db.documents.add({
+          id: docId,
+          templateId: template.id,
+          title: docTitle,
+          status: 'draft',
+          dataJson: JSON.stringify(formData),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
       alert('Draf berhasil disimpan!');
       navigate('/documents');
     } catch (e) {

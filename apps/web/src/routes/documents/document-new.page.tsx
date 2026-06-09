@@ -12,9 +12,22 @@ export function DocumentNewPage() {
     return <Navigate to="/" replace />;
   }
 
+  // Load defaults from localStorage
+  const defaultSize = localStorage.getItem('cetakdocs:default_page_size');
+  const defaultOrientation = localStorage.getItem('cetakdocs:default_orientation');
+
+  const modifiedTemplate = {
+    ...template,
+    page: {
+      ...template.page,
+      size: (defaultSize as any) || template.page.size,
+      orientation: (defaultOrientation as any) || template.page.orientation,
+    }
+  };
+
   return (
     <div className="h-full -m-6 flex flex-col">
-      <DocumentComposer template={template} />
+      <DocumentComposer template={modifiedTemplate} />
     </div>
   );
 }

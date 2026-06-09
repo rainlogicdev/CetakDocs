@@ -16,13 +16,34 @@ export function getBaseDocumentStyles(): string {
     }
 
     /* Typography */
-    h1.document-title {
-      font-size: 20px;
+    h1.document-title, h2.document-title, h3.document-title, h4.document-title {
       font-weight: 700;
       margin: 0 0 10px 0;
       color: #111827;
+      letter-spacing: 0.5px;
+    }
+    
+    h1.document-title.level-1 {
+      font-size: 20px;
       text-transform: uppercase;
       letter-spacing: 1px;
+    }
+    
+    h2.document-title.level-2 {
+      font-size: 16px;
+      margin-top: 15px;
+      text-transform: uppercase;
+    }
+    
+    h3.document-title.level-3 {
+      font-size: 14px;
+      margin-top: 12px;
+    }
+    
+    h4.document-title.level-4 {
+      font-size: 12px;
+      margin-top: 10px;
+      font-style: italic;
     }
     
     .divider {

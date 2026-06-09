@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('cetakdocs', {
   // App version
   getVersion: () => ipcRenderer.invoke('app:version'),
 
+  // Get API Port
+  getApiPort: () => ipcRenderer.invoke('app:apiPort'),
+
   // Safe storage for API keys (encrypted by OS)
   secureStore: {
     set: (key: string, value: string) => ipcRenderer.invoke('secure:set', key, value),

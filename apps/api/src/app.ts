@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import * as fs from 'fs';
+import * as path from 'path';
 import { db } from './db/client';
 import {
   organizations,
@@ -7,9 +9,11 @@ import {
   templates,
   templateVersions,
   documents,
-  numberingSequences
+  numberingSequences,
+  assets,
+  scannedDocuments
 } from './db/schema';
-import { eq, desc, like, or, and } from 'drizzle-orm';
+import { eq, desc, like, or, and, sql } from 'drizzle-orm';
 import {
   generateId,
   generateDocumentNumber,
@@ -437,12 +441,20 @@ app.post('/api/documents/:id/finalize', async (c) => {
     return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Gagal menginisialisasi sequence penomoran' } }, 500);
   }
 
-  // Increment sequence
-  const nextNum = seq.currentNumber + 1;
-  await db.update(numberingSequences)
-    .set({ currentNumber: nextNum, updatedAt: nowStr })
+  // Increment sequence atomically in DB
+  const updatedSeq = await db.update(numberingSequences)
+    .set({ 
+      currentNumber: sql`${numberingSequences.currentNumber} + 1`, 
+      updatedAt: nowStr 
+    })
     .where(eq(numberingSequences.id, seq.id))
-    .run();
+    .returning()
+    .get();
+
+  if (!updatedSeq) {
+    return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Gagal memperbarui sequence penomoran' } }, 500);
+  }
+  const nextNum = updatedSeq.currentNumber;
 
   // Generate final number
   const finalDocNumber = generateDocumentNumber(format, nextNum, now, org ? org.taxId || '' : '', tpl.slug.toUpperCase());
@@ -744,4 +756,181 @@ app.post('/api/backup/restore', async (c) => {
   } catch (err: any) {
     return c.json({ error: { code: 'INTERNAL_ERROR', message: `Gagal memulihkan cadangan: ${err.message}` } }, 500);
   }
+});
+
+// --- SCANNED DOCUMENTS & ASSETS ENDPOINTS ---
+
+// Resolve uploads directory
+const dbPath = process.env.DATABASE_URL
+  ? process.env.DATABASE_URL
+  : `file:${path.resolve(process.cwd(), 'data/app.db')}`;
+const localPath = dbPath.replace('file:', '');
+const dbDir = path.dirname(localPath);
+const uploadsDir = path.resolve(dbDir, 'uploads');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Serve static asset files
+app.get('/api/assets/:id', async (c) => {
+  const id = c.req.param('id');
+  const asset = await db.select().from(assets).where(eq(assets.id, id)).get();
+  if (!asset) {
+    return c.text('Asset tidak ditemukan', 404);
+  }
+  
+  if (!fs.existsSync(asset.storagePath)) {
+    return c.text('Berkas fisik tidak ditemukan', 404);
+  }
+  
+  const buffer = fs.readFileSync(asset.storagePath);
+  return c.body(buffer, 200, {
+    'Content-Type': asset.mimeType,
+    'Content-Disposition': `inline; filename="${asset.originalName}"`
+  });
+});
+
+// Upload scanned document
+app.post('/api/scanned-documents', async (c) => {
+  try {
+    const body = await c.req.parseBody();
+    const file = body['file'] as any;
+    
+    if (!file || typeof file === 'string') {
+      return c.json({ error: { code: 'BAD_REQUEST', message: 'File tidak diunggah atau tidak valid.' } }, 400);
+    }
+    
+    const assetId = generateId('asset');
+    const now = new Date().toISOString();
+    
+    const fileExtension = path.extname(file.name);
+    const filename = `${assetId}${fileExtension}`;
+    const storagePath = path.join(uploadsDir, filename);
+    
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    fs.writeFileSync(storagePath, buffer);
+    
+    await db.insert(assets).values({
+      id: assetId,
+      filename: filename,
+      originalName: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      storagePath: storagePath,
+      createdAt: now
+    }).run();
+    
+    const docId = generateId('scandoc');
+    const title = file.name.replace(fileExtension, '');
+    
+    await db.insert(scannedDocuments).values({
+      id: docId,
+      title: title,
+      originalName: file.name,
+      status: 'pending',
+      category: 'other',
+      rawText: '',
+      metadataJson: '{}',
+      assetId: assetId,
+      createdAt: now,
+      updatedAt: now
+    }).run();
+    
+    const created = await db.select().from(scannedDocuments).where(eq(scannedDocuments.id, docId)).get();
+    return c.json(created);
+  } catch (err: any) {
+    return c.json({ error: { code: 'UPLOAD_ERROR', message: `Gagal mengunggah dokumen: ${err.message}` } }, 500);
+  }
+});
+
+// Get scanned documents list (supports search 'q' and filter 'category')
+app.get('/api/scanned-documents', async (c) => {
+  const q = c.req.query('q');
+  const category = c.req.query('category');
+  
+  let conditions = [];
+  
+  if (q) {
+    conditions.push(or(
+      like(scannedDocuments.title, `%${q}%`),
+      like(scannedDocuments.rawText, `%${q}%`)
+    ));
+  }
+  
+  if (category && category !== 'all') {
+    conditions.push(eq(scannedDocuments.category, category));
+  }
+  
+  let queryBuilder = db.select().from(scannedDocuments);
+  if (conditions.length > 0) {
+    queryBuilder = queryBuilder.where(and(...conditions)) as any;
+  }
+  
+  const list = await queryBuilder.orderBy(desc(scannedDocuments.createdAt)).all();
+  return c.json(list);
+});
+
+// Get scanned document details
+app.get('/api/scanned-documents/:id', async (c) => {
+  const id = c.req.param('id');
+  const doc = await db.select().from(scannedDocuments).where(eq(scannedDocuments.id, id)).get();
+  if (!doc) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Dokumen masuk tidak ditemukan' } }, 404);
+  }
+  return c.json(doc);
+});
+
+// Update scanned document
+app.patch('/api/scanned-documents/:id', async (c) => {
+  const id = c.req.param('id');
+  const doc = await db.select().from(scannedDocuments).where(eq(scannedDocuments.id, id)).get();
+  if (!doc) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Dokumen masuk tidak ditemukan' } }, 404);
+  }
+  
+  const body = await c.req.json();
+  const now = new Date().toISOString();
+  
+  await db.update(scannedDocuments)
+    .set({
+      title: body.title !== undefined ? body.title : doc.title,
+      status: body.status !== undefined ? body.status : doc.status,
+      category: body.category !== undefined ? body.category : doc.category,
+      rawText: body.rawText !== undefined ? body.rawText : doc.rawText,
+      metadataJson: body.metadataJson !== undefined ? body.metadataJson : doc.metadataJson,
+      contactId: body.contactId !== undefined ? body.contactId : doc.contactId,
+      updatedAt: now
+    })
+    .where(eq(scannedDocuments.id, id))
+    .run();
+    
+  const updated = await db.select().from(scannedDocuments).where(eq(scannedDocuments.id, id)).get();
+  return c.json(updated);
+});
+
+// Delete scanned document
+app.delete('/api/scanned-documents/:id', async (c) => {
+  const id = c.req.param('id');
+  const doc = await db.select().from(scannedDocuments).where(eq(scannedDocuments.id, id)).get();
+  if (!doc) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Dokumen masuk tidak ditemukan' } }, 404);
+  }
+  
+  // Try to delete physical asset
+  const asset = await db.select().from(assets).where(eq(assets.id, doc.assetId)).get();
+  if (asset) {
+    if (fs.existsSync(asset.storagePath)) {
+      try {
+        fs.unlinkSync(asset.storagePath);
+      } catch (err) {
+        console.error(`Gagal menghapus berkas fisik: ${asset.storagePath}`, err);
+      }
+    }
+    await db.delete(assets).where(eq(assets.id, doc.assetId)).run();
+  }
+  
+  await db.delete(scannedDocuments).where(eq(scannedDocuments.id, id)).run();
+  return c.json({ success: true });
 });

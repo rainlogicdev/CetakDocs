@@ -14,6 +14,8 @@ export function SettingsPage() {
     message: '' 
   });
   const [saveStatus, setSaveStatus] = useState('');
+  const [defaultPageSize, setDefaultPageSize] = useState('A4');
+  const [defaultOrientation, setDefaultOrientation] = useState('portrait');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -31,6 +33,11 @@ export function SettingsPage() {
       } else {
         setProvider('Custom');
       }
+
+      const size = localStorage.getItem('cetakdocs:default_page_size') || 'A4';
+      const orientation = localStorage.getItem('cetakdocs:default_orientation') || 'portrait';
+      setDefaultPageSize(size);
+      setDefaultOrientation(orientation);
     };
     loadSettings();
   }, []);
@@ -286,7 +293,15 @@ export function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-text mb-1 block">Ukuran Kertas Default</label>
-              <select className="w-full p-2 border border-border rounded-md bg-bg text-text text-sm focus:ring-2 focus:ring-accent outline-none">
+              <select 
+                value={defaultPageSize}
+                onChange={(e) => {
+                  const size = e.target.value;
+                  setDefaultPageSize(size);
+                  localStorage.setItem('cetakdocs:default_page_size', size);
+                }}
+                className="w-full p-2 border border-border rounded-md bg-bg text-text text-sm focus:ring-2 focus:ring-accent outline-none"
+              >
                 <option value="A4">A4 (210 × 297 mm)</option>
                 <option value="A5">A5 (148 × 210 mm)</option>
                 <option value="thermal-80mm">Thermal 80mm</option>
@@ -295,7 +310,15 @@ export function SettingsPage() {
             </div>
             <div>
               <label className="text-sm font-medium text-text mb-1 block">Orientasi Default</label>
-              <select className="w-full p-2 border border-border rounded-md bg-bg text-text text-sm focus:ring-2 focus:ring-accent outline-none">
+              <select 
+                value={defaultOrientation}
+                onChange={(e) => {
+                  const orientation = e.target.value;
+                  setDefaultOrientation(orientation);
+                  localStorage.setItem('cetakdocs:default_orientation', orientation);
+                }}
+                className="w-full p-2 border border-border rounded-md bg-bg text-text text-sm focus:ring-2 focus:ring-accent outline-none"
+              >
                 <option value="portrait">Potret (Tegak)</option>
                 <option value="landscape">Lanskap (Mendatar)</option>
               </select>

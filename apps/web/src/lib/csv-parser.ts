@@ -9,13 +9,13 @@ export interface ParsedCSV {
   rawRows: string[][];
 }
 
-export function parseCSV(text: string): ParsedCSV {
+export function parseCSV(text: string, delimiters: string[] = [',', ';', '\t']): ParsedCSV {
   const lines = splitCSVLines(text.trim());
   if (lines.length === 0) {
     return { headers: [], rows: [], rawRows: [] };
   }
 
-  const rawRows = lines.map(line => parseCSVLine(line));
+  const rawRows = lines.map(line => parseCSVLine(line, delimiters));
   const headers = rawRows[0].map(h => h.trim());
   const dataRows = rawRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
 
@@ -52,7 +52,7 @@ function splitCSVLines(text: string): string[] {
   return lines;
 }
 
-function parseCSVLine(line: string): string[] {
+function parseCSVLine(line: string, delimiters: string[] = [',', ';', '\t']): string[] {
   const cells: string[] = [];
   let current = '';
   let inQuotes = false;
@@ -66,7 +66,7 @@ function parseCSVLine(line: string): string[] {
       } else {
         inQuotes = !inQuotes;
       }
-    } else if ((char === ',' || char === ';' || char === '\t') && !inQuotes) {
+    } else if (delimiters.includes(char) && !inQuotes) {
       cells.push(current);
       current = '';
     } else {
@@ -81,9 +81,8 @@ function parseCSVLine(line: string): string[] {
  * Convert tab-separated clipboard data (from Excel/Sheets) to parsed format.
  */
 export function parseClipboardTable(text: string): ParsedCSV {
-  // Clipboard from Excel/Sheets typically uses tabs
-  const normalized = text.replace(/\t/g, ',');
-  return parseCSV(normalized);
+  // Excel clipboard is strictly tab-separated. Do not split on commas or semicolons!
+  return parseCSV(text, ['\t']);
 }
 
 /**

@@ -10,6 +10,7 @@ import { BackupPage } from './routes/backup.page';
 import { SettingsPage } from './routes/settings.page';
 import { ComingSoonPage } from './components/ComingSoonPage';
 import { BatchPage } from './routes/batch.page';
+import { ScansPage } from './routes/scans.page';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="contacts" element={<ContactsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="backup" element={<BackupPage />} />
+          <Route path="scans" element={<ScansPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<ComingSoonPage title="Halaman Tidak Ditemukan" description="Halaman yang Anda cari tidak ada." />} />
         </Route>

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { FileText, Grid, FileArchive, Users, Settings, Briefcase, Database, Sparkles } from 'lucide-react';
+import { FileText, Grid, FileArchive, Users, Settings, Briefcase, Database, Sparkles, Scan } from 'lucide-react';
 import { ChatPanel } from '../../features/chat/ChatPanel';
 
 const navItems = [
   { name: 'Buat Dokumen', path: '/', icon: FileText },
   { name: 'Template', path: '/templates', icon: Grid },
   { name: 'Dokumen Tersimpan', path: '/documents', icon: FileArchive },
+  { name: 'Dokumen Masuk (OCR)', path: '/scans', icon: Scan },
   { name: 'Kontak', path: '/contacts', icon: Users },
   { name: 'Profil Usaha', path: '/profile', icon: Briefcase },
   { name: 'Backup & Restore', path: '/backup', icon: Database },

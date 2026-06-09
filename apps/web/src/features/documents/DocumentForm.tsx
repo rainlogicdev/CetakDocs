@@ -74,7 +74,9 @@ export function DocumentForm({ template, data, onChange }: DocumentFormProps) {
                               const newData = [...tableData];
                               newData[rowIdx] = { 
                                 ...newData[rowIdx], 
-                                [col.name]: col.type === 'number' || col.type === 'currency' ? Number(e.target.value) : e.target.value 
+                                [col.name]: col.type === 'number' || col.type === 'currency' 
+                                  ? (e.target.value === '' ? '' : Number(e.target.value)) 
+                                  : e.target.value 
                               };
                               handleChange(field.name, newData);
                             }}

@@ -59,7 +59,8 @@ function renderBlock(
 
   if (block.type === 'heading') {
     const headingText = sub(block.text || '');
-    return `<h1 class="document-title" style="text-align: ${block.align || 'center'}">${headingText}</h1>`;
+    const level = block.level || 1;
+    return `<h${level} class="document-title level-${level}" style="text-align: ${block.align || 'center'}">${headingText}</h${level}>`;
 
   } else if (block.type === 'divider') {
     return `<hr class="divider" />`;

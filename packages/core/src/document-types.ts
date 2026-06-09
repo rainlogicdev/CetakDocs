@@ -82,3 +82,21 @@ export interface AuditLog {
   afterJson?: string | null;
   createdAt: string;
 }
+
+export type ScannedDocumentStatus = 'pending' | 'processed' | 'archived';
+export type ScannedDocumentCategory = 'invoice' | 'receipt' | 'letter' | 'contract' | 'other';
+
+export interface ScannedDocument {
+  id: string;
+  title: string;
+  originalName: string;
+  status: ScannedDocumentStatus;
+  category: ScannedDocumentCategory;
+  rawText?: string | null;
+  metadataJson: string; // Serialized metadata from AI OCR
+  assetId: string;
+  contactId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+

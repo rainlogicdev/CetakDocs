@@ -58,7 +58,7 @@ export const documents = sqliteTable('documents', {
   templateId: text('template_id').notNull(),
   templateVersionId: text('template_version_id').notNull(),
   organizationId: text('organization_id'),
-  contactId: text('contact_id'),
+  contactId: text('contact_id').references(() => contacts.id, { onDelete: 'set null' }),
   documentNumber: text('document_number'),
   title: text('title').notNull(),
   status: text('status').notNull().default('draft'), // draft | final | void | archived
@@ -107,3 +107,18 @@ export const auditLogs = sqliteTable('audit_logs', {
   afterJson: text('after_json'),
   createdAt: text('created_at').notNull(),
 });
+
+export const scannedDocuments = sqliteTable('scanned_documents', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  originalName: text('original_name').notNull(),
+  status: text('status').notNull().default('pending'), // pending | processed | archived
+  category: text('category').notNull().default('other'), // invoice | receipt | letter | contract | other
+  rawText: text('raw_text'),
+  metadataJson: text('metadata_json').notNull().default('{}'),
+  assetId: text('asset_id').notNull(),
+  contactId: text('contact_id').references(() => contacts.id, { onDelete: 'set null' }),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+

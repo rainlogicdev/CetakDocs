@@ -45,14 +45,16 @@ export class CetakDocsDB extends Dexie {
   contacts!: Table<LocalContact, string>;
   organizations!: Table<LocalOrganization, string>;
   settings!: Table<AppSettings, string>;
+  scannedDocuments!: Table<any, string>;
 
   constructor() {
     super('CetakDocsDatabase');
-    this.version(2).stores({
+    this.version(3).stores({
       documents: 'id, templateId, status, createdAt, updatedAt',
       contacts: 'id, name, phone, createdAt',
       organizations: 'id',
       settings: 'id, key',
+      scannedDocuments: 'id, title, status, category, createdAt, updatedAt',
     });
   }
 }

@@ -1,10 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type LocalDocument } from '@/lib/db';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FileText, Edit, Trash2 } from 'lucide-react';
 import { formatDateIndonesian } from '@cetakdocs/core';
 
 export function DocumentList() {
+  const navigate = useNavigate();
   const documents = useLiveQuery<LocalDocument[]>(() => db.documents.orderBy('updatedAt').reverse().toArray());
 
   const handleDelete = async (id: string) => {
@@ -67,13 +68,29 @@ export function DocumentList() {
                 </td>
                 <td className="p-4 text-right">
                   <div className="flex justify-end gap-2">
-                    <button
-                      className="p-2 text-text-muted/40 cursor-not-allowed rounded-md"
-                      title="Edit — segera hadir"
-                      disabled
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
+                    {doc.status === 'draft' ? (
+                      <button
+                        onClick={() => navigate(`/documents/new/${doc.templateId}`, {
+                          state: {
+                            editingDocId: doc.id,
+                            initialData: JSON.parse(doc.dataJson),
+                            title: doc.title
+                          }
+                        })}
+                        className="p-2 text-text-muted hover:text-accent hover:bg-accent/10 rounded-md transition-colors"
+                        title="Edit Draf"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button
+                        className="p-2 text-text-muted/40 cursor-not-allowed rounded-md"
+                        title="Hanya draf yang dapat diedit"
+                        disabled
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    )}
                     <button 
                       onClick={() => handleDelete(doc.id)}
                       className="p-2 text-text-muted hover:text-danger hover:bg-danger/10 rounded-md transition-colors"

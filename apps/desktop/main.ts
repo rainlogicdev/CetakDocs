@@ -114,6 +114,10 @@ function registerIpcHandlers() {
     return app.getVersion();
   });
 
+  ipcMain.handle('app:apiPort', () => {
+    return apiPort;
+  });
+
   ipcMain.handle('secure:set', (event, key: string, value: string) => {
     if (!safeStorage.isEncryptionAvailable()) {
       const store = readSecureStore();
