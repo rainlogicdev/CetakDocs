@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "baseUrl": ".",
+    "paths": {
+      "@cetakdocs/core": ["packages/core/src/index.ts"],
+      "@cetakdocs/validators": ["packages/validators/src/index.ts"],
+      "@cetakdocs/templates": ["packages/templates/src/index.ts"],
+      "@cetakdocs/renderer": ["packages/renderer/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}

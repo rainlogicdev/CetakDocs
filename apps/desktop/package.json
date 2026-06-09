@@ -1,0 +1,24 @@
+{
+  "name": "@cetakdocs/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CetakDocs Desktop — Aplikasi Dokumen UMKM Indonesia",
+  "license": "GPL-3.0-or-later",
+  "author": "RainLogic",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "pnpm build:main && electron --experimental-specifier-resolution=node .",
+    "build:main": "tsc -p tsconfig.json",
+    "build:app": "pnpm --filter @cetakdocs/web build && pnpm --filter @cetakdocs/api build",
+    "dist": "pnpm build:main && electron-builder",
+    "dist:win": "pnpm build:main && electron-builder --win"
+  },
+  "dependencies": {
+    "@cetakdocs/api": "workspace:*"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.4.5"
+  }
+}

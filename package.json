@@ -1,0 +1,24 @@
+{
+  "name": "cetakdocs-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Toolkit cetak dokumen UMKM dan komunitas Indonesia",
+  "license": "GPL-3.0-or-later",
+  "author": "RainLogic",
+  "scripts": {
+    "dev": "concurrently -n \"api,web\" -c \"blue,green\" \"pnpm --filter @cetakdocs/api dev\" \"pnpm --filter @cetakdocs/web dev\"",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "desktop:dev": "concurrently -n \"web,electron\" -c \"green,yellow\" \"pnpm --filter @cetakdocs/web dev\" \"cd apps/desktop && pnpm dev\"",
+    "desktop:build": "pnpm build && cd apps/desktop && pnpm dist:win"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "concurrently": "^8.2.2",
+    "lucide-react": "^0.379.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.4.5"
+  }
+}
