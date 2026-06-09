@@ -11,6 +11,7 @@ import { SettingsPage } from './routes/settings.page';
 import { ComingSoonPage } from './components/ComingSoonPage';
 import { BatchPage } from './routes/batch.page';
 import { ScansPage } from './routes/scans.page';
+import { TemplateDesignerPage } from './routes/templates/designer.page';
 
 export default function App() {
   return (
@@ -22,6 +23,8 @@ export default function App() {
           <Route path="batch/:templateId" element={<BatchPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="templates" element={<TemplatesPage />} />
+          <Route path="templates/designer/new" element={<TemplateDesignerPage />} />
+          <Route path="templates/designer/:id" element={<TemplateDesignerPage />} />
           <Route path="contacts" element={<ContactsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="backup" element={<BackupPage />} />

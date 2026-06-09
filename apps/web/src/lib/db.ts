@@ -40,21 +40,44 @@ export interface AppSettings {
   value: string;
 }
 
+export interface LocalTemplate {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  description?: string;
+  locale: string;
+  source: 'custom' | 'imported';
+  page: {
+    size: 'A4' | 'A5' | 'thermal-80mm' | 'thermal-58mm';
+    orientation: 'portrait' | 'landscape';
+    margin: string;
+  };
+  fields: any[]; // TemplateField[]
+  layout: {
+    blocks: any[]; // LayoutBlock[]
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class CetakDocsDB extends Dexie {
   documents!: Table<LocalDocument, string>;
   contacts!: Table<LocalContact, string>;
   organizations!: Table<LocalOrganization, string>;
   settings!: Table<AppSettings, string>;
   scannedDocuments!: Table<any, string>;
+  customTemplates!: Table<LocalTemplate, string>;
 
   constructor() {
     super('CetakDocsDatabase');
-    this.version(3).stores({
+    this.version(4).stores({
       documents: 'id, templateId, status, createdAt, updatedAt',
       contacts: 'id, name, phone, createdAt',
       organizations: 'id',
       settings: 'id, key',
       scannedDocuments: 'id, title, status, category, createdAt, updatedAt',
+      customTemplates: 'id, slug, name, category, createdAt, updatedAt',
     });
   }
 }
