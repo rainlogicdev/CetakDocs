@@ -179,6 +179,19 @@ function registerIpcHandlers() {
 app.whenReady().then(async () => {
   console.log('🖥️  CetakDocs Desktop memulai...');
   
+  // Set database path to a safe, writable directory (app userData)
+  try {
+    const dbDir = path.join(app.getPath('userData'), 'data');
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    const dbPath = path.join(dbDir, 'app.db');
+    process.env.DATABASE_URL = `file:${dbPath}`;
+    console.log(`📂 Database path diatur ke: ${process.env.DATABASE_URL}`);
+  } catch (err) {
+    console.error('❌ Gagal mengonfigurasi database path:', err);
+  }
+  
   registerIpcHandlers();
   
   try {
