@@ -5,11 +5,12 @@ import type { TemplateDefinition } from '@cetakdocs/core';
 interface DocumentToolbarProps {
   template: TemplateDefinition;
   onSaveDraft: () => void;
+  onDownloadPdf?: () => void;
   title: string;
   setTitle: (t: string) => void;
 }
 
-export function DocumentToolbar({ template, onSaveDraft, title, setTitle }: DocumentToolbarProps) {
+export function DocumentToolbar({ template, onSaveDraft, onDownloadPdf, title, setTitle }: DocumentToolbarProps) {
   return (
     <div className="h-16 border-b border-border bg-bg px-4 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-4">
@@ -45,7 +46,10 @@ export function DocumentToolbar({ template, onSaveDraft, title, setTitle }: Docu
           <Printer className="w-4 h-4" />
           <span className="hidden md:inline">Cetak</span>
         </button>
-        <button className="flex items-center gap-2 px-3 py-2 rounded-md border border-border hover:bg-bg-muted text-text transition-colors text-sm font-medium">
+        <button 
+          onClick={onDownloadPdf}
+          className="flex items-center gap-2 px-3 py-2 rounded-md border border-border hover:bg-bg-muted text-text transition-colors text-sm font-medium"
+        >
           <Download className="w-4 h-4" />
           <span className="hidden md:inline">Unduh PDF</span>
         </button>

@@ -1,19 +1,33 @@
-import { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type LocalContact } from '@/lib/db';
-import { Users, Plus, Trash2, Search, Phone, MapPin, Mail } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { contactsApi, type ApiContact } from '@/lib/api-client';
+import { Users, Plus, Trash2, Search, Phone, MapPin, Mail, Loader2 } from 'lucide-react';
 
 export function ContactsPage() {
-  const contacts = useLiveQuery<LocalContact[]>(() => db.contacts.orderBy('name').toArray());
+  const [contacts, setContacts] = useState<ApiContact[] | null>(null);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', phone: '', address: '', email: '', notes: '' });
+  const [error, setError] = useState<string | null>(null);
+
+  const loadContacts = async () => {
+    try {
+      const list = await contactsApi.list();
+      setContacts(list);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  useEffect(() => {
+    loadContacts();
+  }, []);
 
   const filtered = contacts?.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.phone.includes(search) ||
-    c.email.toLowerCase().includes(search.toLowerCase())
+    (c.phone || '').includes(search) ||
+    (c.email || '').toLowerCase().includes(search.toLowerCase())
   ) || [];
 
   const resetForm = () => {
@@ -24,28 +38,40 @@ export function ContactsPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) return alert('Nama wajib diisi.');
-    const now = new Date().toISOString();
-    if (editId) {
-      await db.contacts.update(editId, { ...form, updatedAt: now });
-    } else {
-      await db.contacts.add({
-        id: crypto.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).substring(2),
-        ...form,
-        createdAt: now,
-        updatedAt: now,
-      });
+    try {
+      if (editId) {
+        await contactsApi.update(editId, form);
+      } else {
+        await contactsApi.create(form);
+      }
+      resetForm();
+      await loadContacts();
+    } catch (err: any) {
+      alert('Gagal menyimpan kontak: ' + (err.message || ''));
     }
-    resetForm();
   };
 
-  const handleEdit = (c: LocalContact) => {
-    setForm({ name: c.name, phone: c.phone, address: c.address, email: c.email, notes: c.notes });
+  const handleEdit = (c: ApiContact) => {
+    setForm({
+      name: c.name,
+      phone: c.phone || '',
+      address: c.address || '',
+      email: c.email || '',
+      notes: c.notes || '',
+    });
     setEditId(c.id);
     setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Hapus kontak ini?')) await db.contacts.delete(id);
+    if (confirm('Hapus kontak ini?')) {
+      try {
+        await contactsApi.delete(id);
+        await loadContacts();
+      } catch (err: any) {
+        alert('Gagal menghapus kontak: ' + (err.message || ''));
+      }
+    }
   };
 
   return (
@@ -100,8 +126,17 @@ export function ContactsPage() {
       </div>
 
       {/* List */}
-      {!contacts ? (
-        <div className="text-center py-12 text-text-muted">Memuat kontak...</div>
+      {error ? (
+        <div className="text-center py-12 border border-dashed border-danger/30 rounded-lg bg-danger/5">
+          <p className="text-danger font-medium mb-2">Gagal memuat kontak</p>
+          <p className="text-text-muted text-sm">{error}</p>
+          <button onClick={loadContacts} className="mt-4 px-4 py-2 bg-accent text-white rounded-md text-sm hover:bg-accent/90">Coba Lagi</button>
+        </div>
+      ) : !contacts ? (
+        <div className="text-center py-12 text-text-muted flex items-center justify-center gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Memuat kontak...
+        </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 border border-dashed border-border rounded-lg bg-bg-muted">
           <Users className="w-12 h-12 text-text-muted mx-auto mb-4 opacity-50" />

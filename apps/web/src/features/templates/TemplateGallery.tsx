@@ -1,59 +1,53 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useLiveQuery } from 'dexie-react-hooks';
 import { BUILT_IN_TEMPLATES } from '@cetakdocs/templates';
 import type { TemplateDefinition } from '@cetakdocs/core';
-import { db } from '@/lib/db';
+import { templatesApi, type ApiTemplate } from '@/lib/api-client';
 import { TemplateCard } from './TemplateCard';
 import { Search, Plus, Upload } from 'lucide-react';
 
 export function TemplateGallery() {
   const [search, setSearch] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [apiTemplates, setApiTemplates] = useState<ApiTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const customTemplates = useLiveQuery(() => db.customTemplates.toArray()) || [];
-  const allTemplates = [...customTemplates, ...BUILT_IN_TEMPLATES];
+  useEffect(() => {
+    templatesApi.list()
+      .then(setApiTemplates)
+      .catch(err => {
+        console.warn('API tidak tersedia, menggunakan template bawaan saja:', err.message);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Merge: API templates take priority, fallback to built-in
+  const apiIds = new Set(apiTemplates.map(t => t.id));
+  const builtInOnly = BUILT_IN_TEMPLATES.filter((t: TemplateDefinition) => !apiIds.has(t.id));
+  
+  // Convert API templates to TemplateDefinition shape
+  const normalizedApiTemplates: TemplateDefinition[] = apiTemplates.map(t => ({
+    id: t.id,
+    slug: t.slug,
+    name: t.name,
+    category: t.category,
+    description: t.description || '',
+    locale: 'id-ID',
+    source: t.source as any,
+    page: {
+      size: (t.page?.size || 'A4') as any,
+      orientation: (t.page?.orientation || 'portrait') as any,
+      margin: t.page?.margin || '12mm',
+    },
+    fields: t.fields || [],
+  }));
+
+  const allTemplates = [...normalizedApiTemplates, ...builtInOnly];
 
   const filteredTemplates = allTemplates.filter((template: TemplateDefinition) => 
     template.name.toLowerCase().includes(search.toLowerCase()) || 
     (template.description?.toLowerCase().includes(search.toLowerCase())) ||
     (template.category && template.category.toLowerCase().includes(search.toLowerCase()))
   );
-
-  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        const tpl = JSON.parse(ev.target?.result as string);
-        
-        if (!tpl.name || !tpl.fields || !tpl.layout || !tpl.page) {
-          throw new Error('Format berkas template tidak valid.');
-        }
-
-        const id = tpl.id || 'tpl_' + Date.now().toString(36);
-        const slug = tpl.slug || 'custom-' + Date.now().toString(36);
-
-        await db.customTemplates.add({
-          ...tpl,
-          id,
-          slug,
-          source: 'imported',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-        
-        alert('Template berhasil diimpor!');
-      } catch (err: any) {
-        console.error(err);
-        alert('Gagal mengimpor template: ' + err.message);
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
 
   return (
     <div className="space-y-6">
@@ -64,20 +58,6 @@ export function TemplateGallery() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 px-3 py-2 border border-border hover:bg-bg-muted text-text rounded-md text-sm font-medium transition-colors"
-          >
-            <Upload className="w-4 h-4" />
-            <span>Impor JSON</span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleImportJson}
-            className="hidden"
-          />
           <Link
             to="/templates/designer/new"
             className="flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-md hover:bg-accent/90 text-sm font-medium transition-colors"
@@ -101,16 +81,20 @@ export function TemplateGallery() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredTemplates.map((template: TemplateDefinition) => (
-          <TemplateCard key={template.id} template={template} />
-        ))}
-        {filteredTemplates.length === 0 && (
-          <div className="col-span-full py-12 text-center text-text-muted border border-dashed border-border rounded-lg">
-            Tidak ada template yang cocok dengan pencarian "{search}".
-          </div>
-        )}
-      </div>
+      {loading ? (
+        <div className="text-center py-12 text-text-muted">Memuat template...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredTemplates.map((template: TemplateDefinition) => (
+            <TemplateCard key={template.id} template={template} />
+          ))}
+          {filteredTemplates.length === 0 && (
+            <div className="col-span-full py-12 text-center text-text-muted border border-dashed border-border rounded-lg">
+              Tidak ada template yang cocok dengan pencarian "{search}".
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

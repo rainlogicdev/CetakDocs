@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc && esbuild src/index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --format=esm --external:@hono/node-server --external:@libsql/client --external:better-sqlite3 --external:drizzle-orm --external:dotenv",
+    "build": "tsc && esbuild src/index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js --format=esm --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);import{fileURLToPath}from'url';import{dirname}from'path';const __filename=fileURLToPath(import.meta.url);const __dirname=dirname(__filename);\" --external:chromium-bidi && node -e \"const fs = require('fs'); fs.copyFileSync('node_modules/playwright-core/browsers.json', 'browsers.json')\" && node -e \"const fs = require('fs'); fs.mkdirSync('dist/db/migrations', { recursive: true }); fs.cpSync('src/db/migrations', 'dist/db/migrations', { recursive: true })\"",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push"
   },
@@ -19,13 +19,14 @@
     "@hono/node-server": "^1.11.1",
     "@libsql/client": "^0.6.2",
     "dotenv": "^16.4.5",
-    "drizzle-orm": "^0.30.10",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.3.11",
+    "playwright-core": "^1.44.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",
-    "drizzle-kit": "^0.21.4",
+    "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.0",
     "tsx": "^4.11.0",
     "typescript": "^5.4.5"

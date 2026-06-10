@@ -17,11 +17,13 @@
     "@cetakdocs/api": "workspace:*",
     "@hono/node-server": "^1.11.1",
     "@libsql/client": "^0.6.2",
-    "drizzle-orm": "^0.30.10",
-    "dotenv": "^16.4.5"
+    "@libsql/win32-x64-msvc": "0.3.19",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.45.2",
+    "libsql": "^0.3.19"
   },
   "devDependencies": {
-    "electron": "^31.7.7",
+    "electron": "^42.3.3",
     "electron-builder": "^24.13.3",
     "typescript": "^5.4.5"
   }

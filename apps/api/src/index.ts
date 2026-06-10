@@ -1,6 +1,8 @@
 import { serve } from '@hono/node-server';
 import { app } from './app';
+import { db } from './db/client';
 import { seedTemplates } from './db/seed';
+import { runCustomMigrations } from './db/migrator';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
@@ -13,6 +15,14 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
  */
 export async function startServer(port = 8787): Promise<{ port: number }> {
   console.log('Memulai CetakDocs API Server...');
+  
+  // Jalankan migrasi database pada saat startup
+  try {
+    const migrationsFolder = path.resolve(__dirname, 'db/migrations');
+    await runCustomMigrations(migrationsFolder);
+  } catch (error) {
+    console.error('❌ Gagal melakukan migrasi database:', error);
+  }
   
   // Seed built-in templates dan organisasi awal
   try {
@@ -35,7 +45,7 @@ export async function startServer(port = 8787): Promise<{ port: number }> {
 }
 
 // Run directly if this file is the entry point (not imported by Electron)
-const isDirectRun = process.argv[1]?.includes('index') || !process.argv[1];
+const isDirectRun = !process.versions.electron && (process.argv[1]?.includes('index') || !process.argv[1]);
 if (isDirectRun) {
   const port = process.env.API_PORT ? parseInt(process.env.API_PORT) : 8787;
   startServer(port).catch(err => {

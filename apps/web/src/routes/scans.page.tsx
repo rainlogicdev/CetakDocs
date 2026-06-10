@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db';
+import { contactsApi, type ApiContact } from '@/lib/api-client';
 import { extractStructuredDataFromImage } from '@/lib/ai-service';
+import { db } from '@/lib/db';
 import Tesseract from 'tesseract.js';
 import { 
   Inbox, FileText, Search, Plus, Trash2, Image as ImageIcon, 
@@ -40,8 +40,12 @@ export function ScansPage() {
   const [editMetadata, setEditMetadata] = useState<any>({});
   const [selectedContactId, setSelectedContactId] = useState('');
 
-  // Fetch contacts and templates from Dexie & constants
-  const contacts = useLiveQuery(() => db.contacts.orderBy('name').toArray()) || [];
+  const [contacts, setContacts] = useState<ApiContact[]>([]);
+
+  // Load contacts from API
+  useEffect(() => {
+    contactsApi.list().then(setContacts).catch(() => {});
+  }, []);
   
   const BUILT_IN_TEMPLATES = [
     { id: 'berita-acara-serah-terima', name: 'BAST' },
@@ -71,25 +75,9 @@ export function ScansPage() {
   const fetchScannedDocs = async () => {
     if (!apiUrl) return;
     
-    if (apiUrl === 'local') {
-      // IndexedDB query
-      let list = await db.scannedDocuments.reverse().sortBy('createdAt');
-      
-      // Perform JS filters
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        list = list.filter(d => 
-          d.title.toLowerCase().includes(query) || 
-          (d.rawText && d.rawText.toLowerCase().includes(query))
-        );
-      }
-      if (filterCategory !== 'all') {
-        list = list.filter(d => d.category === filterCategory);
-      }
-      if (filterStatus !== 'all') {
-        list = list.filter(d => d.status === filterStatus);
-      }
-      setScannedDocs(list);
+    if (apiUrl === 'local' || !apiUrl) {
+      // When no server API for scans, show empty
+      setScannedDocs([]);
     } else {
       // Server API query
       try {

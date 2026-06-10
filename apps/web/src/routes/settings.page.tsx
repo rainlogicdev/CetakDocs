@@ -274,7 +274,7 @@ export function SettingsPage() {
             </div>
             <div className="flex justify-between py-2 border-b border-border">
               <span className="text-text-muted">Penyimpanan</span>
-              <span className="font-medium text-text">Browser IndexedDB (Lokal)</span>
+              <span className="font-medium text-text">Server Lokal (SQLite)</span>
             </div>
             <div className="flex justify-between py-2 border-b border-border">
               <span className="text-text-muted">Lisensi</span>
@@ -331,7 +331,7 @@ export function SettingsPage() {
           <h2 className="font-bold text-text mb-2">Privasi & Keamanan</h2>
           <div className="bg-success/5 border border-success/20 rounded-lg p-4 text-sm text-text-muted">
             <p className="font-medium text-success mb-1">✅ Data Anda aman</p>
-            <p>CetakDocs menyimpan semua data secara lokal di browser Anda. Tidak ada data yang dikirim ke server eksternal. Anda memiliki kendali penuh atas data Anda.</p>
+            <p>CetakDocs menyimpan semua data di server lokal (SQLite) di komputer Anda. Tidak ada data yang dikirim ke cloud. Anda memiliki kendali penuh atas data Anda.</p>
           </div>
         </div>
       </div>

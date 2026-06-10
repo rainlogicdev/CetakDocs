@@ -28,6 +28,8 @@ import {
 } from '@cetakdocs/validators';
 import { BUILT_IN_TEMPLATES } from '@cetakdocs/templates';
 
+import { renderHtmlToPdf } from './services/pdf-service';
+
 export const app = new Hono();
 
 // Enable CORS
@@ -593,6 +595,74 @@ app.get('/api/documents/:id/render/html', async (c) => {
 
   const html = renderDocumentHtml(finalTpl, JSON.parse(doc.dataJson), orgName, doc.documentNumber || 'DRAFT');
   return c.html(html);
+});
+
+// GET /api/documents/:id/export/pdf
+app.get('/api/documents/:id/export/pdf', async (c) => {
+  const id = c.req.param('id');
+  const doc = await db.select().from(documents).where(eq(documents.id, id)).get();
+  if (!doc) {
+    return c.text('Dokumen tidak ditemukan', 404);
+  }
+
+  // Load template & version
+  const tpl = await db.select().from(templates).where(eq(templates.id, doc.templateId)).get();
+  if (!tpl) {
+    return c.text('Template tidak ditemukan', 404);
+  }
+  const ver = await db.select().from(templateVersions).where(eq(templateVersions.id, doc.templateVersionId)).get();
+  if (!ver) {
+    return c.text('Versi template tidak ditemukan', 404);
+  }
+
+  const org = await db.select().from(organizations).limit(1).get();
+  const orgName = org ? org.name : '';
+
+  const pageSettings = JSON.parse(ver.printSettingsJson || '{}');
+
+  const tplDef = {
+    id: tpl.id,
+    slug: tpl.slug,
+    name: tpl.name,
+    category: tpl.category,
+    locale: 'id-ID',
+    source: tpl.source as any,
+    page: pageSettings,
+    fields: JSON.parse(ver.schemaJson)
+  };
+
+  const builtInTpl = BUILT_IN_TEMPLATES.find(x => x.id === tpl.id);
+  const finalTpl = builtInTpl || tplDef;
+
+  let html: string;
+  if (doc.status === 'final' && doc.renderedSnapshotHtml) {
+    html = doc.renderedSnapshotHtml;
+  } else {
+    html = renderDocumentHtml(finalTpl, JSON.parse(doc.dataJson), orgName, doc.documentNumber || 'DRAFT');
+  }
+
+  try {
+    const pdfBuffer = await renderHtmlToPdf(html, finalTpl.page);
+    
+    // Set headers
+    const filename = `${doc.title.replace(/[^a-zA-Z0-9]/g, '_')}_${doc.documentNumber || 'DRAFT'}.pdf`;
+    
+    return new Response(pdfBuffer.buffer as ArrayBuffer, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`
+      }
+    });
+  } catch (err: any) {
+    console.error('Gagal me-render PDF di backend:', err);
+    return c.json({
+      error: {
+        code: 'RENDER_FAILED',
+        message: err.message || 'Gagal merender berkas PDF.'
+      }
+    }, 500);
+  }
 });
 
 // 7. Backup Routes

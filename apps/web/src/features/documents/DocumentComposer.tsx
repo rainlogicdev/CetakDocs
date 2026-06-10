@@ -5,7 +5,7 @@ import type { TemplateDefinition } from '@cetakdocs/core';
 import { DocumentToolbar } from './DocumentToolbar';
 import { DocumentForm } from './DocumentForm';
 import { DocumentPreview } from './DocumentPreview';
-import { db } from '@/lib/db';
+import { documentsApi, organizationsApi } from '@/lib/api-client';
 
 interface DocumentComposerProps {
   template: TemplateDefinition;
@@ -18,6 +18,25 @@ export function DocumentComposer({ template }: DocumentComposerProps) {
   const initialData = location.state?.initialData || {};
   const [formData, setFormData] = useState<Record<string, any>>(initialData);
   const [docTitle, setDocTitle] = useState(location.state?.title || `${template.name} Baru`);
+  const [templateVersionId, setTemplateVersionId] = useState<string | null>(null);
+  const [orgId, setOrgId] = useState<string | null>(null);
+
+  // Load organization and template version info
+  useEffect(() => {
+    organizationsApi.list().then(orgs => {
+      if (orgs.length > 0) setOrgId(orgs[0].id);
+    }).catch(() => {});
+
+    // Get template version ID from API
+    import('@/lib/api-client').then(({ templatesApi }) => {
+      templatesApi.list().then(templates => {
+        const apiTpl = templates.find(t => t.id === template.id);
+        if (apiTpl?.latestVersionId) {
+          setTemplateVersionId(apiTpl.latestVersionId);
+        }
+      });
+    }).catch(() => {});
+  }, [template.id]);
 
   // Bind AI helper context to global window object
   useEffect(() => {
@@ -33,33 +52,68 @@ export function DocumentComposer({ template }: DocumentComposerProps) {
 
   const handleSaveDraft = async () => {
     try {
+      const versionId = templateVersionId || `${template.id}_v1`;
+      
       if (editingDocId) {
-        await db.documents.update(editingDocId, {
+        await documentsApi.update(editingDocId, {
+          templateId: template.id,
+          templateVersionId: versionId,
+          organizationId: orgId || undefined,
           title: docTitle,
           dataJson: JSON.stringify(formData),
-          updatedAt: new Date().toISOString(),
         });
       } else {
-        // Use fallback for crypto.randomUUID in non-secure contexts
-        const docId = typeof crypto !== 'undefined' && crypto.randomUUID 
-          ? crypto.randomUUID() 
-          : Date.now().toString(36) + Math.random().toString(36).substring(2);
-          
-        await db.documents.add({
-          id: docId,
+        await documentsApi.create({
           templateId: template.id,
+          templateVersionId: versionId,
+          organizationId: orgId || undefined,
           title: docTitle,
-          status: 'draft',
           dataJson: JSON.stringify(formData),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
         });
       }
       alert('Draf berhasil disimpan!');
       navigate('/documents');
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Gagal menyimpan draf.');
+      alert('Gagal menyimpan draf: ' + (e.message || 'Kesalahan tidak diketahui'));
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    let docId = editingDocId;
+    try {
+      const versionId = templateVersionId || `${template.id}_v1`;
+      if (docId) {
+        await documentsApi.update(docId, {
+          templateId: template.id,
+          templateVersionId: versionId,
+          organizationId: orgId || undefined,
+          title: docTitle,
+          dataJson: JSON.stringify(formData),
+        });
+      } else {
+        const created = await documentsApi.create({
+          templateId: template.id,
+          templateVersionId: versionId,
+          organizationId: orgId || undefined,
+          title: docTitle,
+          dataJson: JSON.stringify(formData),
+        });
+        docId = created.id;
+      }
+      
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+      const downloadUrl = `${API_BASE}/api/documents/${docId}/export/pdf`;
+      
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `${docTitle}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e: any) {
+      console.error(e);
+      alert('Gagal mengunduh PDF: ' + (e.message || 'Kesalahan tidak diketahui'));
     }
   };
 
@@ -69,6 +123,7 @@ export function DocumentComposer({ template }: DocumentComposerProps) {
         <DocumentToolbar 
           template={template} 
           onSaveDraft={handleSaveDraft}
+          onDownloadPdf={handleDownloadPdf}
           title={docTitle}
           setTitle={setDocTitle}
         />

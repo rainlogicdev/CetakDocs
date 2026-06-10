@@ -1,30 +1,65 @@
 import { useState, useEffect } from 'react';
-import { db, getOrCreateOrg, type LocalOrganization } from '@/lib/db';
-import { Briefcase, Save, CheckCircle } from 'lucide-react';
+import { organizationsApi, type ApiOrganization } from '@/lib/api-client';
+import { Briefcase, Save, CheckCircle, Loader2 } from 'lucide-react';
 
 export function ProfilePage() {
-  const [org, setOrg] = useState<LocalOrganization | null>(null);
+  const [org, setOrg] = useState<ApiOrganization | null>(null);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getOrCreateOrg().then(setOrg);
+    organizationsApi.list()
+      .then(orgs => {
+        if (orgs.length > 0) setOrg(orgs[0]);
+      })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
   const handleSave = async () => {
     if (!org) return;
-    await db.organizations.put({ ...org, updatedAt: new Date().toISOString() });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      await organizationsApi.update(org.id, {
+        name: org.name,
+        legalName: org.legalName || undefined,
+        address: org.address || undefined,
+        phone: org.phone || undefined,
+        email: org.email || undefined,
+        taxId: org.taxId || undefined,
+        settingsJson: org.settingsJson,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err: any) {
+      alert('Gagal menyimpan profil: ' + (err.message || ''));
+    }
   };
 
-  if (!org) return <div className="text-center py-12 text-text-muted">Memuat profil...</div>;
+  if (loading) {
+    return (
+      <div className="text-center py-12 text-text-muted flex items-center justify-center gap-2">
+        <Loader2 className="w-5 h-5 animate-spin" />
+        Memuat profil...
+      </div>
+    );
+  }
 
-  const field = (label: string, key: keyof LocalOrganization, placeholder: string, type = 'text') => (
+  if (error || !org) {
+    return (
+      <div className="text-center py-12 border border-dashed border-danger/30 rounded-lg bg-danger/5">
+        <p className="text-danger font-medium mb-2">Gagal memuat profil usaha</p>
+        <p className="text-text-muted text-sm">{error || 'Tidak ada profil usaha ditemukan.'}</p>
+      </div>
+    );
+  }
+
+  const field = (label: string, key: keyof ApiOrganization, placeholder: string, type = 'text') => (
     <div>
       <label className="text-sm font-medium text-text mb-1 block">{label}</label>
       <input
         type={type}
-        value={org[key] as string}
+        value={(org[key] as string) || ''}
         onChange={e => setOrg({ ...org, [key]: e.target.value })}
         className="w-full p-2 border border-border rounded-md bg-bg text-text focus:ring-2 focus:ring-accent outline-none text-sm"
         placeholder={placeholder}
@@ -72,7 +107,7 @@ export function ProfilePage() {
           )}
         </div>
         
-        <p className="text-xs text-text-muted">Data disimpan di browser Anda. Tidak dikirim ke server mana pun.</p>
+        <p className="text-xs text-text-muted">Data disimpan di server lokal (SQLite). Tidak dikirim ke cloud.</p>
       </div>
     </div>
   );

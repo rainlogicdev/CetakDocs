@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useLiveQuery } from 'dexie-react-hooks';
+
 import { 
   ArrowLeft, Plus, Trash2, Move, Save, Download, FileText, 
   Settings, Type, Heading as HeadingIcon, ListOrdered, 
   CheckSquare, HelpCircle, Columns, Eye
 } from 'lucide-react';
-import { db, type LocalTemplate } from '@/lib/db';
+
 import { DocumentPreview } from '@/features/documents/DocumentPreview';
 
 // Available layout block presets
@@ -48,18 +48,26 @@ export function TemplateDesignerPage() {
   // Load template if in Edit mode
   useEffect(() => {
     if (isEdit && id) {
-      db.customTemplates.get(id).then((tpl) => {
-        if (tpl) {
-          setName(tpl.name);
-          setCategory(tpl.category);
-          setDescription(tpl.description || '');
-          setPageSize(tpl.page.size);
-          setPageOrientation(tpl.page.orientation);
-          setPageMargin(tpl.page.margin);
-          setFields(tpl.fields || []);
-          setBlocks(tpl.layout.blocks || []);
+      // Load from localStorage custom templates
+      try {
+        const stored = localStorage.getItem('cetakdocs:custom_templates');
+        if (stored) {
+          const templates = JSON.parse(stored);
+          const tpl = templates.find((t: any) => t.id === id);
+          if (tpl) {
+            setName(tpl.name);
+            setCategory(tpl.category);
+            setDescription(tpl.description || '');
+            setPageSize(tpl.page.size);
+            setPageOrientation(tpl.page.orientation);
+            setPageMargin(tpl.page.margin);
+            setFields(tpl.fields || []);
+            setBlocks(tpl.layout?.blocks || []);
+          }
         }
-      });
+      } catch (err) {
+        console.error('Failed to load custom template:', err);
+      }
     }
   }, [isEdit, id]);
 
@@ -89,15 +97,15 @@ export function TemplateDesignerPage() {
   const handleSave = async () => {
     if (!name.trim()) return alert('Nama template wajib diisi.');
     
-    const slug = isEdit ? id : 'custom_' + Date.now().toString(36);
-    const templateData: LocalTemplate = {
+    const slug = isEdit ? id! : 'custom_' + Date.now().toString(36);
+    const templateData = {
       id: slug,
       slug,
       name,
       category,
       description,
       locale: 'id-ID',
-      source: 'custom',
+      source: 'custom' as const,
       page: {
         size: pageSize,
         orientation: pageOrientation,
@@ -112,11 +120,17 @@ export function TemplateDesignerPage() {
     };
 
     try {
-      if (isEdit) {
-        await db.customTemplates.put(templateData);
+      // Save to localStorage
+      const stored = localStorage.getItem('cetakdocs:custom_templates');
+      const templates = stored ? JSON.parse(stored) : [];
+      const existIdx = templates.findIndex((t: any) => t.id === slug);
+      if (existIdx >= 0) {
+        templates[existIdx] = templateData;
       } else {
-        await db.customTemplates.add(templateData);
+        templates.push(templateData);
       }
+      localStorage.setItem('cetakdocs:custom_templates', JSON.stringify(templates));
+
       alert('Template kustom berhasil disimpan!');
       navigate('/templates');
     } catch (e: any) {

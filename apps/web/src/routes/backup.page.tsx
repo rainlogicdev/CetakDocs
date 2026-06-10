@@ -1,32 +1,24 @@
 import { useRef } from 'react';
-import { db } from '@/lib/db';
-import { Download, Upload, AlertTriangle, Database, CheckCircle } from 'lucide-react';
+import { backupApi } from '@/lib/api-client';
+import { Download, Upload, AlertTriangle, Database } from 'lucide-react';
 
 export function BackupPage() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const handleExport = async () => {
-    const [documents, contacts, organizations] = await Promise.all([
-      db.documents.toArray(),
-      db.contacts.toArray(),
-      db.organizations.toArray(),
-    ]);
+    try {
+      const backup = await backupApi.export();
 
-    const backup = {
-      format: 'cetakdocs-backup',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      appVersion: '0.1.0',
-      data: { documents, contacts, organizations },
-    };
-
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cetakdocs-backup-${new Date().toISOString().substring(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cetakdocs-backup-${new Date().toISOString().substring(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert('Gagal mengekspor data: ' + (err.message || ''));
+    }
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,36 +36,15 @@ export function BackupPage() {
 
       if (!confirm(`File backup tertanggal ${parsed.exportedAt?.substring(0, 10) || '?'}.\n\nData saat ini akan DIGANTI SELURUHNYA dengan data dari backup.\n\nLanjutkan?`)) return;
 
-      const { documents, contacts, organizations } = parsed.data;
-
-      await db.transaction('rw', [db.documents, db.contacts, db.organizations], async () => {
-        await db.documents.clear();
-        await db.contacts.clear();
-        await db.organizations.clear();
-        if (documents?.length) await db.documents.bulkAdd(documents);
-        if (contacts?.length) await db.contacts.bulkAdd(contacts);
-        if (organizations?.length) await db.organizations.bulkAdd(organizations);
-      });
-
-      alert(`Backup berhasil dipulihkan!\n\n• ${documents?.length || 0} dokumen\n• ${contacts?.length || 0} kontak\n• ${organizations?.length || 0} profil usaha`);
-    } catch (err) {
+      await backupApi.restore(parsed);
+      alert('Backup berhasil dipulihkan!');
+      window.location.reload();
+    } catch (err: any) {
       console.error(err);
-      alert('Gagal membaca file backup. Pastikan file JSON valid.');
+      alert('Gagal membaca file backup: ' + (err.message || 'Pastikan file JSON valid.'));
     }
 
     if (fileInput.current) fileInput.current.value = '';
-  };
-
-  const handleClearAll = async () => {
-    if (!confirm('PERINGATAN: Semua data (dokumen, kontak, profil) akan DIHAPUS PERMANEN.\n\nApakah Anda yakin?')) return;
-    if (!confirm('Konfirmasi terakhir: Data yang dihapus TIDAK BISA dikembalikan.\n\nHapus semua?')) return;
-
-    await db.transaction('rw', [db.documents, db.contacts, db.organizations], async () => {
-      await db.documents.clear();
-      await db.contacts.clear();
-      await db.organizations.clear();
-    });
-    alert('Semua data berhasil dihapus.');
   };
 
   return (
@@ -97,7 +68,7 @@ export function BackupPage() {
             </div>
             <div className="flex-1">
               <h2 className="font-bold text-text mb-1">Ekspor Data</h2>
-              <p className="text-sm text-text-muted mb-4">Unduh semua dokumen, kontak, dan profil usaha Anda dalam satu file JSON.</p>
+              <p className="text-sm text-text-muted mb-4">Unduh semua dokumen, kontak, template, dan profil usaha Anda dalam satu file JSON.</p>
               <button onClick={handleExport} className="px-4 py-2 bg-success text-white rounded-md hover:bg-success/90 transition-colors text-sm font-medium flex items-center gap-2">
                 <Download className="w-4 h-4" /> Unduh Backup (.json)
               </button>
@@ -122,23 +93,20 @@ export function BackupPage() {
           </div>
         </div>
 
-        {/* Danger Zone */}
-        <div className="bg-bg border border-danger/30 rounded-xl p-6">
+        {/* Info */}
+        <div className="bg-bg border border-border rounded-xl p-6 shadow-sm">
           <div className="flex items-start gap-4">
-            <div className="p-2.5 bg-danger/10 rounded-lg shrink-0">
-              <AlertTriangle className="w-5 h-5 text-danger" />
+            <div className="p-2.5 bg-warning/10 rounded-lg shrink-0">
+              <AlertTriangle className="w-5 h-5 text-warning" />
             </div>
             <div className="flex-1">
-              <h2 className="font-bold text-danger mb-1">Zona Berbahaya</h2>
-              <p className="text-sm text-text-muted mb-4">Menghapus seluruh data dari browser ini. Tindakan ini tidak dapat dibatalkan.</p>
-              <button onClick={handleClearAll} className="px-4 py-2 bg-danger text-white rounded-md hover:bg-danger/90 transition-colors text-sm font-medium">
-                Hapus Semua Data
-              </button>
+              <h2 className="font-bold text-text mb-1">Catatan Penting</h2>
+              <p className="text-sm text-text-muted">Data disimpan di server lokal (SQLite). Restore akan mengganti seluruh data yang ada. Pastikan Anda mengekspor cadangan terlebih dahulu sebelum melakukan restore.</p>
             </div>
           </div>
         </div>
 
-        <p className="text-xs text-text-muted text-center">Semua data disimpan secara lokal di browser Anda (IndexedDB). Tidak ada data yang dikirim ke server.</p>
+        <p className="text-xs text-text-muted text-center">Semua data disimpan secara lokal di server (SQLite). Tidak ada data yang dikirim ke cloud.</p>
       </div>
     </div>
   );
