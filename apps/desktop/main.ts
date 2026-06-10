@@ -59,7 +59,7 @@ function createWindow() {
     autoHideMenuBar: true,
   });
 
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+  const isDev = !app.isPackaged;
   
   if (isDev) {
     mainWindow.loadURL(`http://localhost:5173`);
